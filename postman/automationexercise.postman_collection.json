@@ -1,0 +1,456 @@
+{
+  "info": {
+    "_postman_id": "8a402a3d-f8cf-4021-900a-b0267220d875",
+    "name": "AutomationExercise API Tests",
+    "description": "Covers the public API of automationexercise.com. Note: responses always use HTTP 200, the real status is the responseCode field in the JSON body.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Products and brands",
+      "item": [
+        {
+          "name": "GET all products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "// NOTE: this API answers HTTP 200 even for errors - the real result is inside the body",
+                  "pm.test('HTTP status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body responseCode is 200', () => pm.expect(json.responseCode).to.eql(200));",
+                  "pm.test('Products list is not empty', () => pm.expect(json.products).to.be.an('array').that.is.not.empty);",
+                  "pm.test('Each product has the expected fields', () => {",
+                  "  json.products.forEach(p => {",
+                  "    pm.expect(p).to.have.all.keys('id', 'name', 'price', 'brand', 'category');",
+                  "    pm.expect(p.price).to.match(/^Rs\\. \\d+/);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productsList"
+          }
+        },
+        {
+          "name": "POST to productsList (not allowed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 405', () => pm.expect(json.responseCode).to.eql(405));",
+                  "pm.test('Message explains the method is unsupported', () => pm.expect(json.message).to.include('not supported'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/productsList"
+          }
+        },
+        {
+          "name": "GET all brands",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 200', () => pm.expect(json.responseCode).to.eql(200));",
+                  "pm.test('Brands have id and brand name', () => {",
+                  "  pm.expect(json.brands).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(json.brands[0]).to.have.all.keys('id', 'brand');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/brandsList"
+          }
+        },
+        {
+          "name": "POST search product - 'top'",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 200', () => pm.expect(json.responseCode).to.eql(200));",
+                  "pm.test('Search returns products', () => pm.expect(json.products).to.be.an('array').that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/searchProduct",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "search_product",
+                  "value": "top",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST search product - missing parameter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 400', () => pm.expect(json.responseCode).to.eql(400));",
+                  "pm.test('Message mentions the missing parameter', () => pm.expect(json.message).to.include('search_product'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/searchProduct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User lifecycle",
+      "item": [
+        {
+          "name": "POST create account",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// unique user per run so the collection can be re-run any time",
+                  "pm.collectionVariables.set('email', `qa.${Date.now()}@example.com`);",
+                  "pm.collectionVariables.set('password', 'Test@1234');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 201', () => pm.expect(json.responseCode).to.eql(201));",
+                  "pm.test('Message confirms creation', () => pm.expect(json.message).to.eql('User created!'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/createAccount",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "name",
+                  "value": "Rina Das",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Mrs",
+                  "type": "text"
+                },
+                {
+                  "key": "birth_date",
+                  "value": "12",
+                  "type": "text"
+                },
+                {
+                  "key": "birth_month",
+                  "value": "6",
+                  "type": "text"
+                },
+                {
+                  "key": "birth_year",
+                  "value": "1994",
+                  "type": "text"
+                },
+                {
+                  "key": "firstname",
+                  "value": "Rina",
+                  "type": "text"
+                },
+                {
+                  "key": "lastname",
+                  "value": "Das",
+                  "type": "text"
+                },
+                {
+                  "key": "company",
+                  "value": "QA Labs",
+                  "type": "text"
+                },
+                {
+                  "key": "address1",
+                  "value": "12 Test Street",
+                  "type": "text"
+                },
+                {
+                  "key": "address2",
+                  "value": "Suite 4",
+                  "type": "text"
+                },
+                {
+                  "key": "country",
+                  "value": "Canada",
+                  "type": "text"
+                },
+                {
+                  "key": "zipcode",
+                  "value": "10001",
+                  "type": "text"
+                },
+                {
+                  "key": "state",
+                  "value": "Ontario",
+                  "type": "text"
+                },
+                {
+                  "key": "city",
+                  "value": "Toronto",
+                  "type": "text"
+                },
+                {
+                  "key": "mobile_number",
+                  "value": "5551234567",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST verify login - valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 200', () => pm.expect(json.responseCode).to.eql(200));",
+                  "pm.test('Message says user exists', () => pm.expect(json.message).to.eql('User exists!'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/verifyLogin",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST verify login - wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 404', () => pm.expect(json.responseCode).to.eql(404));",
+                  "pm.test('Message says user not found', () => pm.expect(json.message).to.eql('User not found!'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/verifyLogin",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "wrong-password",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT verify login (not allowed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 405', () => pm.expect(json.responseCode).to.eql(405));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/verifyLogin"
+          }
+        },
+        {
+          "name": "GET user detail by email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 200', () => pm.expect(json.responseCode).to.eql(200));",
+                  "pm.test('Returned user matches the one we created', () => {",
+                  "  pm.expect(json.user.email).to.eql(pm.collectionVariables.get('email'));",
+                  "  pm.expect(json.user.first_name).to.eql('Rina');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/getUserDetailByEmail?email={{email}}"
+          }
+        },
+        {
+          "name": "DELETE account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Body responseCode is 200', () => pm.expect(json.responseCode).to.eql(200));",
+                  "pm.test('Message confirms deletion', () => pm.expect(json.message).to.eql('Account deleted!'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/deleteAccount",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST verify login - after deletion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('Deleted user can no longer log in', () => pm.expect(json.responseCode).to.eql(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/verifyLogin",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "email",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
